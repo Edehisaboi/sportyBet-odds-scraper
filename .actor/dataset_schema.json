@@ -1,0 +1,74 @@
+{
+  "actorSpecification": 1,
+  "fields": {},
+  "views": {
+    "odds": {
+      "title": "Fixture odds",
+      "transformation": {
+        "fields": [
+          "matched",
+          "requested_home_team",
+          "requested_away_team",
+          "home_team",
+          "away_team",
+          "kickoff_utc",
+          "competition_key",
+          "event_id",
+          "match_reason",
+          "match_score",
+          "quote_count",
+          "markets_covered",
+          "captured_at",
+          "error"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "matched": { "label": "Matched" },
+          "requested_home_team": { "label": "Requested home" },
+          "requested_away_team": { "label": "Requested away" },
+          "home_team": { "label": "SportyBet home" },
+          "away_team": { "label": "SportyBet away" },
+          "kickoff_utc": { "label": "Kickoff (UTC)" },
+          "competition_key": { "label": "Competition" },
+          "event_id": { "label": "Event id" },
+          "match_reason": { "label": "Match reason" },
+          "match_score": { "label": "Score" },
+          "quote_count": { "label": "Quotes" },
+          "markets_covered": { "label": "Markets" },
+          "captured_at": { "label": "Captured (UTC)" },
+          "error": { "label": "Error" }
+        }
+      }
+    },
+    "events": {
+      "title": "Upcoming events",
+      "transformation": {
+        "fields": [
+          "event_id",
+          "competition_key",
+          "tournament_name",
+          "category_name",
+          "home_team",
+          "away_team",
+          "kickoff_utc",
+          "total_market_size"
+        ]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "event_id": { "label": "Event id" },
+          "competition_key": { "label": "Competition" },
+          "tournament_name": { "label": "Tournament" },
+          "category_name": { "label": "Country" },
+          "home_team": { "label": "Home" },
+          "away_team": { "label": "Away" },
+          "kickoff_utc": { "label": "Kickoff (UTC)" },
+          "total_market_size": { "label": "Markets" }
+        }
+      }
+    }
+  }
+}

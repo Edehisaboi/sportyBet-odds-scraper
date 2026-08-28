@@ -1,0 +1,73 @@
+{
+  "title": "SportyBet Odds Scraper",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string",
+      "description": "odds: price a named list of fixtures. events: list what SportyBet currently carries, for discovery and for verifying tournament ids.",
+      "editor": "select",
+      "enum": ["odds", "events"],
+      "enumTitles": ["Odds for named fixtures", "Discover upcoming events"],
+      "default": "odds"
+    },
+    "fixtures": {
+      "title": "Fixtures",
+      "type": "array",
+      "description": "Fixtures to price (odds mode). Each needs homeTeam and awayTeam; kickoff is strongly recommended, since it gates which SportyBet events are even considered. Supply eventId when a previous run already resolved it to skip matching entirely.",
+      "editor": "json",
+      "prefill": [
+        {
+          "fixtureId": "d1f0c6b2-0000-4000-8000-000000000001",
+          "externalId": "flashscore-match-id",
+          "competitionKey": "premier_league",
+          "homeTeam": "Crystal Palace",
+          "awayTeam": "Manchester City",
+          "kickoff": "2026-08-28T19:00:00Z"
+        }
+      ]
+    },
+    "competitions": {
+      "title": "Competitions",
+      "type": "array",
+      "description": "Competition keys to list in events mode, or \"all\" for the catalog. Leave empty for SportyBet's entire football slate.",
+      "editor": "stringList",
+      "default": []
+    },
+    "windowDays": {
+      "title": "Window (days)",
+      "type": "integer",
+      "description": "How far ahead to list events in events mode. SportyBet itself carries roughly four weeks.",
+      "default": 14,
+      "minimum": 1,
+      "maximum": 45
+    },
+    "matching": {
+      "title": "Matching thresholds",
+      "type": "object",
+      "description": "Overrides for fixture resolution. kickoffToleranceMinutes gates candidates by kickoff; minNameScore is the floor each team name must clear; minCombinedScore is the floor for their average; minMargin is how far clear of the runner-up the winner must be before a match is accepted rather than reported ambiguous.",
+      "editor": "json",
+      "default": {}
+    },
+    "maxConcurrency": {
+      "title": "Max concurrency",
+      "type": "integer",
+      "description": "Parallel event fetches. Each matched fixture costs one request.",
+      "default": 5,
+      "minimum": 1,
+      "maximum": 25
+    },
+    "proxyConfiguration": {
+      "title": "Proxy configuration",
+      "type": "object",
+      "description": "Apify proxy settings. Datacenter proxies are sufficient; the API is unauthenticated JSON.",
+      "editor": "proxy",
+      "default": {
+        "useApifyProxy": true,
+        "apifyProxyGroups": ["BUYPROXIES94952"]
+      }
+    }
+  },
+  "required": []
+}

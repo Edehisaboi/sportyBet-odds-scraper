@@ -1,0 +1,19 @@
+{
+  "name": "sportybet-odds-scraper",
+  "version": "0.1.0",
+  "description": "Apify Actor for scraping SportyBet (NG) football odds for the markets ParlayHux prices.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "apify": "^3.7.0",
+    "got-scraping": "^4.1.1",
+    "p-limit": "^6.2.0"
+  },
+  "devDependencies": {}
+}
