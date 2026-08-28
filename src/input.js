@@ -95,11 +95,13 @@ export function resolveEventsRun(input = {}) {
     throw new Error(`windowDays must be between 1 and 45, got "${input.windowDays}"`);
   }
 
-  // No competitions means the whole slate, which is the useful default here:
-  // `events` mode exists to discover what SportyBet actually carries.
+  // Always scoped to the catalog. SportyBet carries 300+ tournaments, the vast
+  // majority of which ParlayHux does not price, and listing them buried the
+  // competitions we do support in a few thousand rows of noise. Naming no
+  // competitions means all the supported ones, not all the ones on the site.
   const requested = input.competitions;
-  const hasScope = requested === 'all' || (Array.isArray(requested) && requested.length);
-  const competitions = hasScope ? resolveCompetitions(requested) : [];
+  const hasScope = Array.isArray(requested) ? requested.length > 0 : Boolean(requested);
+  const competitions = resolveCompetitions(hasScope ? requested : 'all');
 
   return { competitions, windowDays };
 }

@@ -102,8 +102,19 @@ test('resolveEventsRun bounds the lookahead window', () => {
   assert.throws(() => resolveEventsRun({ windowDays: 90 }), /windowDays must be between/);
 });
 
-test('resolveEventsRun with no competitions means the whole slate', () => {
-  assert.deepEqual(resolveEventsRun({}).competitions, []);
+test('resolveEventsRun with no competitions means every supported one', () => {
+  // Not the whole SportyBet slate: 300+ tournaments, almost none of them ours.
+  const { competitions } = resolveEventsRun({});
+  assert.ok(competitions.length >= 18);
+  assert.ok(competitions.every((competition) => competition.tournamentId));
+});
+
+test('resolveEventsRun narrows to the competitions named', () => {
+  assert.deepEqual(
+    resolveEventsRun({ competitions: ['serie_a'] }).competitions.map((item) => item.key),
+    ['serie_a'],
+  );
+  assert.throws(() => resolveEventsRun({ competitions: ['nope'] }), /Unknown competition/);
 });
 
 // -- feed flattening -----------------------------------------------------

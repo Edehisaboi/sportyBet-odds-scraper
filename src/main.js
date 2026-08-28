@@ -52,9 +52,12 @@ async function runEvents({ input, proxyConfiguration, log }) {
   const horizonMillis = Date.now() + windowDays * 24 * 60 * 60 * 1000;
   const wantedKeys = new Set(competitions.map((competition) => competition.key));
 
+  // Anything outside the catalog is dropped, including the ~290 tournaments
+  // SportyBet carries that ParlayHux does not price: an event with no
+  // competition key is not something the backend could use.
   const selected = index.events.filter((event) => {
     if (event.kickoffMillis !== null && event.kickoffMillis > horizonMillis) return false;
-    return wantedKeys.size === 0 || wantedKeys.has(event.competitionKey);
+    return wantedKeys.has(event.competitionKey);
   });
 
   selected.sort((first, second) => (first.kickoffMillis ?? 0) - (second.kickoffMillis ?? 0));
