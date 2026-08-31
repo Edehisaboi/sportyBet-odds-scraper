@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { competitionKeyForTournament, getCompetition, resolveCompetitions } from '../src/competitions.js';
-import { flattenPage } from '../src/events.js';
+import { fetchEventIndex, flattenPage } from '../src/events.js';
 import {
   normalizeProxyConfiguration,
   resolveEventsRun,
@@ -149,6 +149,36 @@ test('flattenPage tolerates an empty page', () => {
   assert.deepEqual(flattenPage(undefined), []);
 });
 
+test('fetchEventIndex looks past one empty page and stops after confirmation', async () => {
+  const calls = [];
+  const eventPage = (eventId) => ({
+    totalNum: 2,
+    tournaments: [{
+      id: 'sr:tournament:17',
+      events: [{ eventId, homeTeamName: 'Home', awayTeamName: 'Away' }],
+    }],
+  });
+  const pages = [eventPage('sr:match:1'), {}, eventPage('sr:match:2'), {}, {}];
+
+  const index = await fetchEventIndex({
+    maxPages: pages.length,
+    fetchPage: async ({ pageNum }) => {
+      calls.push(pageNum);
+      return pages[pageNum - 1];
+    },
+  });
+
+  assert.deepEqual(calls, [1, 2, 3, 4, 5]);
+  assert.deepEqual(index.events.map((item) => item.eventId), ['sr:match:1', 'sr:match:2']);
+});
+
+test('fetchEventIndex fails instead of silently skipping a failed page', async () => {
+  await assert.rejects(
+    fetchEventIndex({ fetchPage: async () => { throw new Error('upstream unavailable'); } }),
+    /upstream unavailable/,
+  );
+});
+
 // -- rows ----------------------------------------------------------------
 
 test('an unmatched fixture still produces a row explaining itself', () => {
@@ -164,6 +194,37 @@ test('an unmatched fixture still produces a row explaining itself', () => {
   assert.equal(row.event_id, null);
   assert.equal(row.requested_home_team, 'A');
   assert.equal(row.bookmaker, 'sportybet');
+});
+
+test('an unmatched row preserves its nearest-candidate evidence', () => {
+  const kickoffMillis = Date.parse('2026-09-04T19:00:00Z');
+  const row = buildFixtureOddsRow({
+    fixture: { fixtureId: 'a', homeTeam: 'A', awayTeam: 'B', kickoff: kickoffMillis },
+    resolution: {
+      event: null,
+      reason: 'below_name_threshold',
+      score: 0.75,
+      homeScore: 1,
+      awayScore: 0.5,
+      weakestScore: 0.5,
+      nearest: {
+        eventId: 'sr:match:1',
+        homeTeam: 'A FC',
+        awayTeam: 'B United',
+        kickoffMillis,
+        homeScore: 1,
+        awayScore: 0.5,
+        weakestScore: 0.5,
+        combined: 0.75,
+      },
+    },
+    capturedAt: '2026-08-28T18:00:00.000Z',
+  });
+
+  assert.equal(row.nearest_event_id, 'sr:match:1');
+  assert.equal(row.nearest_home_team, 'A FC');
+  assert.equal(row.nearest_kickoff_utc, '2026-09-04T19:00:00.000Z');
+  assert.equal(row.match_weakest_score, 0.5);
 });
 
 test('a matched row reports SportyBet names alongside the requested ones', () => {

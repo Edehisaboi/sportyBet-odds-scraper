@@ -56,9 +56,9 @@ the candidate pool. `eventId`, if you have one from a previous run, skips
 matching altogether.
 
 One row comes back per requested fixture, **including the ones that did not
-match** — the caller asked about a specific fixture, and "SportyBet does not
-have this" is an answer it needs. A short dataset would be indistinguishable
-from a run that half failed.
+match** — the caller asked about a specific fixture, and "not listed yet" or
+"needs a name alias" are answers it needs. A short dataset would be
+indistinguishable from a run that half failed.
 
 ### `events`
 
@@ -145,12 +145,15 @@ Aligning puts `city` against `united` and scores 0.63, below threshold.
 Against a live slate, 47 of 47 hand-written Flashscore-style names for the top
 five leagues resolved to the correct event, with no mismatches and no swaps.
 
-Every rejection reports why (`match_reason`) and what it nearly matched
-(`nearest`), so an unresolved fixture can be diagnosed from the dataset without
-a re-run. Thresholds are tunable per run via `matching`:
+Every rejection reports why (`match_reason`) and persists its nearest event and
+individual team scores in the `nearest_*` fields, so an unresolved fixture can
+be diagnosed from the dataset without a re-run. `no_plausible_name_candidate`
+means events existed near that kickoff but none resembled the requested teams;
+`below_name_threshold` is reserved for a meaningful near-match that may need an
+alias. Thresholds are tunable per run via `matching`:
 
 ```json
-{ "matching": { "kickoffToleranceMinutes": 360, "minNameScore": 0.72, "minCombinedScore": 0.80, "minMargin": 0.06 } }
+{ "matching": { "kickoffToleranceMinutes": 360, "minPlausibleScore": 0.40, "minNameScore": 0.72, "minCombinedScore": 0.80, "minMargin": 0.06 } }
 ```
 
 ## Output
@@ -172,6 +175,9 @@ One row per requested fixture:
   "matched": true,
   "match_reason": "name_match",
   "match_score": 1,
+  "match_home_score": 1,
+  "match_away_score": 1,
+  "match_weakest_score": 1,
   "quote_count": 85,
   "markets_covered": 11,
   "captured_at": "2026-08-28T18:11:34.913Z",

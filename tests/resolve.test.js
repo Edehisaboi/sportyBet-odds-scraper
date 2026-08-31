@@ -61,6 +61,25 @@ test('nameSimilarity connects abbreviations to full names', () => {
   assert.ok(nameSimilarity('Wolverhampton Wanderers', 'Wolves') > 0.8);
 });
 
+test('nameSimilarity covers provider aliases observed in a real odds run', () => {
+  const aliases = [
+    ['QPR', 'Queens Park Rangers'],
+    ['St. Truiden', 'St. Truidense VV'],
+    ['Royale Union SG', 'Union Gilloise'],
+    ['St. Liege', 'Standard Liege'],
+    ['Ath Bilbao', 'Athletic Bilbao'],
+    ['Atl. Madrid', 'Atletico Madrid'],
+    ['Dep. A Coruna', 'RC Deportivo De La Coruna'],
+    ['Celta Vigo B', 'RC Celta Fortuna'],
+    ['St Etienne', 'Saint-Etienne'],
+    ['Amedspor', 'Amed Sportif Faaliyetler'],
+  ];
+
+  for (const [requested, provider] of aliases) {
+    assert.ok(nameSimilarity(requested, provider) >= 0.8, `${requested} should match ${provider}`);
+  }
+});
+
 test('nameSimilarity separates different clubs that share a city', () => {
   assert.ok(nameSimilarity('Manchester City', 'Manchester United') < 0.72);
   assert.ok(nameSimilarity('AC Milan', 'Inter Milan') < 0.72);
@@ -138,6 +157,38 @@ test('both teams must clear the threshold, not just one', () => {
   assert.equal(result.event, null);
   assert.equal(result.reason, 'below_name_threshold');
   assert.equal(result.nearest.eventId, 'sr:match:1', 'the near miss is reported for diagnosis');
+});
+
+test('an unrelated event near the kickoff is not reported as a spelling near-match', () => {
+  const result = resolveFixture(
+    { homeTeam: 'Arsenal', awayTeam: 'Chelsea', kickoff: KICKOFF },
+    [event({ homeTeam: 'Everton', awayTeam: 'Man Utd' })],
+  );
+
+  assert.equal(result.event, null);
+  assert.equal(result.reason, 'no_plausible_name_candidate');
+  assert.ok(result.nearest);
+});
+
+test('real-run aliases resolve without relaxing the safety thresholds', () => {
+  const cases = [
+    ['QPR', 'Cardiff', 'Queens Park Rangers', 'Cardiff City'],
+    ['St. Truiden', 'Royale Union SG', 'St. Truidense VV', 'Union Gilloise'],
+    ['St. Liege', 'Antwerp', 'Standard Liege', 'Royal Antwerp FC'],
+    ['Ath Bilbao', 'Atl. Madrid', 'Athletic Bilbao', 'Atletico Madrid'],
+    ['Villarreal', 'Dep. A Coruna', 'Villarreal', 'RC Deportivo De La Coruna'],
+    ['Celta Vigo B', 'Castellon', 'RC Celta Fortuna', 'CD Castellon'],
+    ['Dijon', 'St Etienne', 'Dijon', 'Saint-Etienne'],
+    ['Amedspor', 'Trabzonspor', 'Amed Sportif Faaliyetler', 'Trabzonspor'],
+  ];
+
+  for (const [homeTeam, awayTeam, providerHome, providerAway] of cases) {
+    const result = resolveFixture(
+      { homeTeam, awayTeam, kickoff: KICKOFF },
+      [event({ homeTeam: providerHome, awayTeam: providerAway })],
+    );
+    assert.equal(result.reason, 'name_match', `${homeTeam} vs ${awayTeam}`);
+  }
 });
 
 test('two equally plausible candidates are reported ambiguous, not guessed', () => {

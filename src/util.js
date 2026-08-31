@@ -57,6 +57,7 @@ const TOKEN_SUBSTITUTIONS = Object.freeze({
  * values are both normalised before use, so casing and accents do not matter.
  */
 export const NAME_ALIASES = Object.freeze({
+  qpr: 'queens park rangers',
   'man city': 'manchester city',
   'man utd': 'manchester united',
   'man united': 'manchester united',
@@ -85,6 +86,8 @@ export const NAME_ALIASES = Object.freeze({
   'eintracht frankfurt': 'frankfurt',
   'atletico madrid': 'atletico madrid',
   'athletic bilbao': 'athletic club',
+  'ath bilbao': 'athletic club',
+  'atl madrid': 'atletico madrid',
   'real sociedad': 'real sociedad',
   betis: 'real betis',
   psv: 'psv eindhoven',
@@ -96,6 +99,16 @@ export const NAME_ALIASES = Object.freeze({
   galatasaray: 'galatasaray istanbul',
   fenerbahce: 'fenerbahce istanbul',
   besiktas: 'besiktas istanbul',
+  'st truiden': 'sint truidense',
+  'st truidense vv': 'sint truidense',
+  'royale union sg': 'union saint gilloise',
+  'union gilloise': 'union saint gilloise',
+  'st liege': 'standard liege',
+  'st etienne': 'saint etienne',
+  'dep a coruna': 'deportivo la coruna',
+  'celtavigo b': 'celta fortuna',
+  'celta vigo b': 'celta fortuna',
+  amedspor: 'amed sportif faaliyetler',
 });
 
 /**

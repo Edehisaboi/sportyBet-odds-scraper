@@ -20,7 +20,11 @@ export const FIXTURE_ODDS_FIELDS = Object.freeze([
   'fixture_id', 'external_id', 'competition_key', 'bookmaker',
   'event_id', 'game_id', 'home_team', 'away_team', 'kickoff_utc',
   'requested_home_team', 'requested_away_team', 'requested_kickoff_utc',
-  'matched', 'match_reason', 'match_score', 'teams_swapped',
+  'matched', 'match_reason', 'match_score', 'match_home_score',
+  'match_away_score', 'match_weakest_score', 'teams_swapped',
+  'nearest_event_id', 'nearest_home_team', 'nearest_away_team',
+  'nearest_kickoff_utc', 'nearest_home_score', 'nearest_away_score',
+  'nearest_weakest_score', 'nearest_combined_score',
   'tournament_id', 'tournament_name', 'category_name',
   'total_market_size', 'quote_count', 'markets_covered',
   'captured_at', 'quotes', 'error',
@@ -61,6 +65,7 @@ export function buildEventRow(event) {
  */
 export function buildFixtureOddsRow({ fixture, resolution, event, quotes, capturedAt, error }) {
   const matchedEvent = resolution?.event ?? null;
+  const nearest = resolution?.nearest ?? null;
   const distinctMarkets = new Set((quotes ?? []).map((quote) => quote.market));
 
   return {
@@ -85,7 +90,27 @@ export function buildFixtureOddsRow({ fixture, resolution, event, quotes, captur
     matched: Boolean(matchedEvent),
     match_reason: resolution?.reason ?? null,
     match_score: resolution?.score !== undefined ? Number(resolution.score.toFixed(3)) : null,
+    match_home_score: resolution?.homeScore !== undefined
+      ? Number(resolution.homeScore.toFixed(3))
+      : null,
+    match_away_score: resolution?.awayScore !== undefined
+      ? Number(resolution.awayScore.toFixed(3))
+      : null,
+    match_weakest_score: resolution?.weakestScore !== undefined
+      ? Number(resolution.weakestScore.toFixed(3))
+      : null,
     teams_swapped: Boolean(resolution?.swapped),
+
+    // Rejected near-matches must remain diagnosable after the actor log expires.
+    // These fields are null for accepted matches and for an empty kickoff window.
+    nearest_event_id: nearest?.eventId ?? null,
+    nearest_home_team: nearest?.homeTeam ?? null,
+    nearest_away_team: nearest?.awayTeam ?? null,
+    nearest_kickoff_utc: toIso(nearest?.kickoffMillis),
+    nearest_home_score: nearest?.homeScore ?? null,
+    nearest_away_score: nearest?.awayScore ?? null,
+    nearest_weakest_score: nearest?.weakestScore ?? null,
+    nearest_combined_score: nearest?.combined ?? null,
 
     tournament_id: matchedEvent?.tournamentId ?? null,
     tournament_name: matchedEvent?.tournamentName ?? null,

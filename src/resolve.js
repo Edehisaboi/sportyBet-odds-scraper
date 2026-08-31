@@ -31,6 +31,11 @@ export const DEFAULT_RESOLUTION = Object.freeze({
   minNameScore: 0.72,
   // And the pair average has to be comfortably better than the floor.
   minCombinedScore: 0.80,
+  // Below this, even the best event in the kickoff window is just a coincidental
+  // neighbour rather than a meaningful name near-match. Keeping this separate
+  // from the acceptance thresholds makes "not listed" distinguishable from an
+  // alias or spelling problem.
+  minPlausibleScore: 0.40,
   // How far clear of the runner-up the winner must be.
   minMargin: 0.06,
 });
@@ -78,7 +83,16 @@ export function resolveFixture(fixture, events, options = {}) {
   if (fixture.eventId) {
     const known = events.find((event) => event.eventId === fixture.eventId);
     if (known) {
-      return { event: known, score: 1, reason: 'event_id', swapped: false, candidates: 1 };
+      return {
+        event: known,
+        score: 1,
+        homeScore: 1,
+        awayScore: 1,
+        weakestScore: 1,
+        reason: 'event_id',
+        swapped: false,
+        candidates: 1,
+      };
     }
     // A supplied id that is not in the upcoming index is stale (the match has
     // started, or been removed); fall through and try to match it afresh.
@@ -129,7 +143,12 @@ export function resolveFixture(fixture, events, options = {}) {
     return {
       event: null,
       score: best.combined,
-      reason: 'below_name_threshold',
+      homeScore: best.homeScore,
+      awayScore: best.awayScore,
+      weakestScore: best.weakest,
+      reason: best.combined < settings.minPlausibleScore
+        ? 'no_plausible_name_candidate'
+        : 'below_name_threshold',
       swapped: best.swapped,
       candidates: scored.length,
       nearest: describe(best),
@@ -140,6 +159,9 @@ export function resolveFixture(fixture, events, options = {}) {
     return {
       event: null,
       score: best.combined,
+      homeScore: best.homeScore,
+      awayScore: best.awayScore,
+      weakestScore: best.weakest,
       reason: 'ambiguous_match',
       swapped: best.swapped,
       candidates: scored.length,
@@ -151,6 +173,9 @@ export function resolveFixture(fixture, events, options = {}) {
   return {
     event: best.event,
     score: best.combined,
+    homeScore: best.homeScore,
+    awayScore: best.awayScore,
+    weakestScore: best.weakest,
     reason: best.swapped ? 'name_match_teams_swapped' : 'name_match',
     swapped: best.swapped,
     candidates: scored.length,
@@ -162,6 +187,12 @@ function describe(candidate) {
     eventId: candidate.event.eventId,
     homeTeam: candidate.event.homeTeam,
     awayTeam: candidate.event.awayTeam,
+    kickoffMillis: candidate.event.kickoffMillis,
+    competitionKey: candidate.event.competitionKey,
+    tournamentName: candidate.event.tournamentName,
+    homeScore: Number(candidate.homeScore.toFixed(3)),
+    awayScore: Number(candidate.awayScore.toFixed(3)),
+    weakestScore: Number(candidate.weakest.toFixed(3)),
     combined: Number(candidate.combined.toFixed(3)),
   };
 }

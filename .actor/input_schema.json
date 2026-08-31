@@ -46,7 +46,7 @@
     "matching": {
       "title": "Matching thresholds",
       "type": "object",
-      "description": "Overrides for fixture resolution. kickoffToleranceMinutes gates candidates by kickoff; minNameScore is the floor each team name must clear; minCombinedScore is the floor for their average; minMargin is how far clear of the runner-up the winner must be before a match is accepted rather than reported ambiguous.",
+      "description": "Overrides for fixture resolution. kickoffToleranceMinutes gates candidates by kickoff; minPlausibleScore separates unrelated nearby events from real name near-misses; minNameScore is the floor each team name must clear; minCombinedScore is the floor for their average; minMargin is how far clear of the runner-up the winner must be before a match is accepted rather than reported ambiguous.",
       "editor": "json",
       "default": {}
     },

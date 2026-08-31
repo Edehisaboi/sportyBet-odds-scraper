@@ -16,6 +16,7 @@ import { canonicalName, logInfo, logWarning } from './util.js';
 // The feed reports pageSize but honours it loosely -- it pages by tournament,
 // so a page holds 40-100 events. This is a stop, not an expectation.
 const MAX_PAGES = 60;
+const EMPTY_PAGE_STOP_COUNT = 2;
 
 /** Flatten one page's tournament groups into plain event records. */
 export function flattenPage(page) {
@@ -54,32 +55,46 @@ export function flattenPage(page) {
 /**
  * Walk the whole upcoming index.
  *
- * Pages are fetched in order and stop at the first empty one. A page that
- * fails is logged and skipped rather than failing the run: a hole in the index
- * costs a few unresolved fixtures, while an exception costs the entire slate.
+ * Pages are fetched in order and stop after two consecutive empty responses.
+ * One empty response can be a transient upstream hole; requiring confirmation
+ * prevents it from silently truncating the index. A page that still fails after
+ * the API client's retries fails the run because continuing would misreport the
+ * missing page as dozens of fixtures absent from the bookmaker.
  */
 export async function fetchEventIndex(options = {}) {
-  const { sportId = SPORT_ID, maxPages = MAX_PAGES, log } = options;
+  const {
+    sportId = SPORT_ID,
+    maxPages = MAX_PAGES,
+    emptyPageStopCount = EMPTY_PAGE_STOP_COUNT,
+    fetchPage = fetchUpcomingPage,
+    log,
+  } = options;
   const byEventId = new Map();
   let pagesFetched = 0;
+  let consecutiveEmptyPages = 0;
   let totalNum = null;
   const failures = [];
 
   for (let pageNum = 1; pageNum <= maxPages; pageNum += 1) {
     let page;
     try {
-      page = await fetchUpcomingPage({ sportId, pageNum }, { ...options, sessionId: `index_${pageNum}` });
+      page = await fetchPage({ sportId, pageNum }, { ...options, sessionId: `index_${pageNum}` });
     } catch (error) {
       logWarning(log, `Upcoming index page ${pageNum} failed`, { message: error.message });
       failures.push({ pageNum, message: error.message });
-      continue;
+      throw error;
     }
 
     pagesFetched += 1;
     if (totalNum === null && Number.isFinite(Number(page?.totalNum))) totalNum = Number(page.totalNum);
 
     const events = flattenPage(page);
-    if (!events.length) break;
+    if (!events.length) {
+      consecutiveEmptyPages += 1;
+      if (consecutiveEmptyPages >= emptyPageStopCount) break;
+      continue;
+    }
+    consecutiveEmptyPages = 0;
 
     for (const event of events) {
       if (event.eventId) byEventId.set(event.eventId, event);
