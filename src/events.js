@@ -2,11 +2,14 @@
  * Building the index of SportyBet events that fixtures are resolved against.
  *
  * `pcUpcomingEvents` pages through every upcoming football event on the site --
- * roughly 1,700 across 300+ tournaments, covering about four weeks ahead -- in
- * 19 pages with no overlap between them. Pulling the whole index once per run
- * and matching in memory is both cheaper and more reliable than a lookup per
- * fixture, and it is what lets a fixture in an uncatalogued competition still
- * resolve.
+ * on the order of 1,300 across 200+ tournaments, covering about seven weeks
+ * ahead -- in a dozen or so pages with no overlap between them. Pulling the
+ * whole index once per run and matching in memory is both cheaper and more
+ * reliable than a lookup per fixture, and it is what lets a fixture in an
+ * uncatalogued competition still resolve.
+ *
+ * `fetchUpcomingPage` asks for the complete list rather than the site's
+ * highlights view; see the comment there for what that is worth.
  */
 
 import { competitionKeyForTournament, SPORT_ID } from './competitions.js';
@@ -42,7 +45,7 @@ export function flattenPage(page) {
         categoryName: tournament.categoryName ?? category.name ?? '',
         competitionKey: competitionKeyForTournament(tournament.id ?? category.tournament?.id),
         // Precomputed once here rather than per comparison: resolving a slate
-        // of 200 fixtures against 1,700 events is 340,000 comparisons.
+        // of 200 fixtures against 1,300 events is 260,000 comparisons.
         homeCanonical: canonicalName(event.homeTeamName),
         awayCanonical: canonicalName(event.awayTeamName),
       });
@@ -108,6 +111,20 @@ export async function fetchEventIndex(options = {}) {
     reportedTotal: totalNum,
     failedPages: failures.length,
   });
+
+  // The feed tells us how many events it has. An index short of that is a
+  // truncated index, and every fixture in the gap is about to be reported as
+  // not offered by the bookmaker -- which is exactly how a request parameter
+  // capping each tournament at ten events went unnoticed. Say so loudly rather
+  // than let the resolution rate absorb it.
+  if (totalNum !== null && events.length < totalNum) {
+    logWarning(log, 'SportyBet index is short of the reported total', {
+      collected: events.length,
+      reportedTotal: totalNum,
+      missing: totalNum - events.length,
+      pagesFetched,
+    });
+  }
 
   return { events, pagesFetched, totalNum, failures };
 }

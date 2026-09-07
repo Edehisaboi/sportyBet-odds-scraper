@@ -73,6 +73,11 @@ test('nameSimilarity covers provider aliases observed in a real odds run', () =>
     ['Celta Vigo B', 'RC Celta Fortuna'],
     ['St Etienne', 'Saint-Etienne'],
     ['Amedspor', 'Amed Sportif Faaliyetler'],
+    // The three that came back below threshold on the run of 2026-09-07.
+    ['Nurnberg', '1 FC Nuremberg'],
+    ['Laval', 'Stade Lavallois MFC'],
+    ['Basaksehir', 'Istanbul BB'],
+    ['Sabah Baku', 'Sabah Masazir'],
   ];
 
   for (const [requested, provider] of aliases) {
@@ -83,6 +88,9 @@ test('nameSimilarity covers provider aliases observed in a real odds run', () =>
 test('nameSimilarity separates different clubs that share a city', () => {
   assert.ok(nameSimilarity('Manchester City', 'Manchester United') < 0.72);
   assert.ok(nameSimilarity('AC Milan', 'Inter Milan') < 0.72);
+  // The Basaksehir alias must not pull in the other Istanbul clubs.
+  assert.ok(nameSimilarity('Istanbul BB', 'Istanbulspor') < 0.72);
+  assert.ok(nameSimilarity('Nuremberg', 'Hamburger SV') < 0.72);
 });
 
 // -- scoring -------------------------------------------------------------
@@ -218,6 +226,69 @@ test('the competition narrows the pool but does not exclude a fixture we cannot 
   );
 
   assert.equal(result.event?.eventId, 'sr:match:1');
+});
+
+test('a competition scope that holds the wrong events does not hide the right one', () => {
+  // SportyBet files cup ties and qualifiers under tournaments of their own, so
+  // our competition key can be right about the fixture and wrong about where
+  // the event sits. Narrowing to the scope and giving up inside it reported
+  // "not on the slate" for events that were on it.
+  const events = [
+    event({
+      eventId: 'sr:match:elsewhere',
+      competitionKey: 'premier_league',
+      homeTeam: 'Everton',
+      awayTeam: 'Brentford',
+    }),
+    event({
+      eventId: 'sr:match:right',
+      competitionKey: 'championship',
+      homeTeam: 'Crystal Palace',
+      awayTeam: 'Man City',
+    }),
+  ];
+
+  const result = resolveFixture(
+    { homeTeam: 'Crystal Palace', awayTeam: 'Man City', kickoff: KICKOFF, competitionKey: 'premier_league' },
+    events,
+  );
+
+  assert.equal(result.event?.eventId, 'sr:match:right');
+});
+
+test('a scoped retry cannot lower the acceptance bar', () => {
+  // Widening the pool must only widen what is considered. Nothing on this
+  // slate is the fixture, in either scope, so it stays unresolved.
+  const events = [
+    event({ eventId: 'sr:match:1', competitionKey: 'premier_league', homeTeam: 'Everton', awayTeam: 'Brentford' }),
+    event({ eventId: 'sr:match:2', competitionKey: 'championship', homeTeam: 'Hull City', awayTeam: 'Luton Town' }),
+  ];
+
+  const result = resolveFixture(
+    { homeTeam: 'Crystal Palace', awayTeam: 'Man City', kickoff: KICKOFF, competitionKey: 'premier_league' },
+    events,
+  );
+
+  assert.equal(result.event, null);
+});
+
+test('a kickoff-window rejection says what the nearest event was', () => {
+  // Without this the reason was the whole report, and every one of them had to
+  // be diagnosed by hand against the live slate.
+  const events = [
+    event({ eventId: 'sr:match:1', kickoffMillis: KICKOFF + 24 * 60 * 60 * 1000 }),
+  ];
+
+  const result = resolveFixture(
+    { homeTeam: 'Crystal Palace', awayTeam: 'Man City', kickoff: KICKOFF },
+    events,
+  );
+
+  assert.equal(result.event, null);
+  assert.equal(result.reason, 'no_candidate_in_kickoff_window');
+  assert.equal(result.nearest?.eventId, 'sr:match:1');
+  assert.ok(result.nearest.combined > 0.9, 'the names matched; only the time did not');
+  assert.equal(result.nearest.kickoffDeltaMinutes, 1440);
 });
 
 test('a fixture with no kickoff still resolves on names alone', () => {

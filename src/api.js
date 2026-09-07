@@ -130,6 +130,15 @@ export async function apiGet(path, options = {}) {
  * `marketId=1` asks for the 1X2 market only. The index is used to find events,
  * not to price them, and requesting a single market keeps each page around
  * 120 KB instead of several megabytes.
+ *
+ * `option=2` is the whole list; `option=1` is the site's highlights view, which
+ * returns at most **ten events per tournament** however large the page size --
+ * `pageSize` and `pageNum` page tournaments, not events, so there is no way to
+ * ask for the eleventh. On a full slate that silently dropped 239 of 1,315
+ * events, always the ones furthest out: every competition ended at ten and the
+ * later matchdays were simply absent. Fixtures in that hole were reported as
+ * not offered by the bookmaker, which is why this parameter is worth a comment
+ * this long.
  */
 export async function fetchUpcomingPage({ sportId, pageNum, pageSize = 100 }, options = {}) {
   const query = new URLSearchParams({
@@ -137,7 +146,7 @@ export async function fetchUpcomingPage({ sportId, pageNum, pageSize = 100 }, op
     marketId: '1',
     pageSize: String(pageSize),
     pageNum: String(pageNum),
-    option: '1',
+    option: '2',
   });
   return apiGet(`factsCenter/pcUpcomingEvents?${query}`, options);
 }

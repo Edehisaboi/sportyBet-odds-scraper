@@ -98,34 +98,54 @@ export function resolveFixture(fixture, events, options = {}) {
     // started, or been removed); fall through and try to match it afresh.
   }
 
-  // Narrow to the fixture's competition when we know it and SportyBet has
-  // events there. Falling back to the whole slate matters: our catalog does
-  // not cover every competition ParlayHux might carry.
-  let pool = events;
-  if (fixture.competitionKey) {
-    const scoped = events.filter((event) => event.competitionKey === fixture.competitionKey);
-    if (scoped.length) pool = scoped;
+  const scoped = scopeToCompetition(fixture, events);
+  const outcome = attempt(fixture, scoped, kickoffMillis, settings);
+
+  // A scoped failure is retried against the whole slate. The competition is a
+  // hint, not a fact: our key may be missing from the catalog, SportyBet files
+  // qualifiers and cup ties under tournaments of their own, and a fixture can
+  // simply be bucketed somewhere we did not predict. Narrowing first and then
+  // giving up inside that narrow pool reported "not on the slate" for events
+  // that were on it all along. The thresholds below are unchanged, so widening
+  // the pool cannot lower the bar -- only widen what is considered.
+  if (!outcome.event && scoped.length !== events.length) {
+    return attempt(fixture, events, kickoffMillis, settings);
   }
+  return outcome;
+}
+
+/** The fixture's own competition, when we know it and SportyBet carries it. */
+function scopeToCompetition(fixture, events) {
+  if (!fixture.competitionKey) return events;
+  const scoped = events.filter((event) => event.competitionKey === fixture.competitionKey);
+  return scoped.length ? scoped : events;
+}
+
+/** Gate by kickoff, score what is left, and apply the acceptance rules. */
+function attempt(fixture, candidates, kickoffMillis, settings) {
+  let pool = candidates;
 
   if (kickoffMillis !== null) {
     const toleranceMillis = settings.kickoffToleranceMinutes * 60 * 1000;
     const withinWindow = pool.filter((event) => (
       event.kickoffMillis !== null && Math.abs(event.kickoffMillis - kickoffMillis) <= toleranceMillis
     ));
-    // Only adopt the time gate when it leaves something. An empty window means
-    // the match is not on this slate at all, which the scoring below reports
-    // more usefully than an empty candidate list would.
-    if (withinWindow.length) {
-      pool = withinWindow;
-    } else {
+    if (!withinWindow.length) {
       return {
         event: null,
         score: 0,
         reason: 'no_candidate_in_kickoff_window',
         swapped: false,
         candidates: 0,
+        // Scored only on this path, so the common case still pays for the time
+        // gate first. Without it the rejection said nothing at all, and every
+        // one of them had to be diagnosed by hand: this names the closest
+        // event by name whatever its kickoff, which is what separates "not
+        // listed by the bookmaker" from "listed, but our kickoff is wrong".
+        nearest: nearestByName(fixture, pool, kickoffMillis),
       };
     }
+    pool = withinWindow;
   }
 
   if (!pool.length) {
@@ -151,7 +171,7 @@ export function resolveFixture(fixture, events, options = {}) {
         : 'below_name_threshold',
       swapped: best.swapped,
       candidates: scored.length,
-      nearest: describe(best),
+      nearest: describe(best, kickoffMillis),
     };
   }
 
@@ -165,8 +185,8 @@ export function resolveFixture(fixture, events, options = {}) {
       reason: 'ambiguous_match',
       swapped: best.swapped,
       candidates: scored.length,
-      nearest: describe(best),
-      runnerUp: describe(runnerUp),
+      nearest: describe(best, kickoffMillis),
+      runnerUp: describe(runnerUp, kickoffMillis),
     };
   }
 
@@ -182,12 +202,29 @@ export function resolveFixture(fixture, events, options = {}) {
   };
 }
 
-function describe(candidate) {
+/** The best name match on a slate, ignoring kickoff entirely. */
+function nearestByName(fixture, events, kickoffMillis) {
+  if (!events.length) return null;
+  let best = null;
+  for (const event of events) {
+    const scored = { event, ...scoreCandidate(fixture, event) };
+    if (!best || scored.combined > best.combined) best = scored;
+  }
+  return describe(best, kickoffMillis);
+}
+
+function describe(candidate, kickoffMillis = null) {
+  const eventKickoff = candidate.event.kickoffMillis;
   return {
     eventId: candidate.event.eventId,
     homeTeam: candidate.event.homeTeam,
     awayTeam: candidate.event.awayTeam,
-    kickoffMillis: candidate.event.kickoffMillis,
+    kickoffMillis: eventKickoff,
+    // How far this candidate sits from the fixture we were asked about. The
+    // one number that says whether a rejection was about names or about time.
+    kickoffDeltaMinutes: (kickoffMillis === null || eventKickoff === null)
+      ? null
+      : Math.round((eventKickoff - kickoffMillis) / 60000),
     competitionKey: candidate.event.competitionKey,
     tournamentName: candidate.event.tournamentName,
     homeScore: Number(candidate.homeScore.toFixed(3)),

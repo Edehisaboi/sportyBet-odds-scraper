@@ -23,7 +23,8 @@ export const FIXTURE_ODDS_FIELDS = Object.freeze([
   'matched', 'match_reason', 'match_score', 'match_home_score',
   'match_away_score', 'match_weakest_score', 'teams_swapped',
   'nearest_event_id', 'nearest_home_team', 'nearest_away_team',
-  'nearest_kickoff_utc', 'nearest_home_score', 'nearest_away_score',
+  'nearest_kickoff_utc', 'nearest_kickoff_delta_minutes',
+  'nearest_home_score', 'nearest_away_score',
   'nearest_weakest_score', 'nearest_combined_score',
   'tournament_id', 'tournament_name', 'category_name',
   'total_market_size', 'quote_count', 'markets_covered',
@@ -107,6 +108,9 @@ export function buildFixtureOddsRow({ fixture, resolution, event, quotes, captur
     nearest_home_team: nearest?.homeTeam ?? null,
     nearest_away_team: nearest?.awayTeam ?? null,
     nearest_kickoff_utc: toIso(nearest?.kickoffMillis),
+    // Signed minutes from our kickoff to the candidate's. On a
+    // no_candidate_in_kickoff_window row this is the whole diagnosis.
+    nearest_kickoff_delta_minutes: nearest?.kickoffDeltaMinutes ?? null,
     nearest_home_score: nearest?.homeScore ?? null,
     nearest_away_score: nearest?.awayScore ?? null,
     nearest_weakest_score: nearest?.weakestScore ?? null,

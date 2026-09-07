@@ -22,7 +22,7 @@ const NOISE_TOKENS = new Set([
   'fc', 'afc', 'cf', 'sc', 'ac', 'ss', 'ssc', 'as', 'us', 'usl', 'sv', 'tsv', 'vfl', 'vfb',
   'bsc', 'fsv', 'ssv', 'msv', 'spvgg', 'bv', 'sk', 'bk', 'if', 'ifk', 'ff', 'gif', 'aik',
   'cd', 'ud', 'rcd', 'ca', 'cs', 'sd', 'ec', 'se', 'fk', 'nk', 'hnk', 'gnk',
-  'ks', 'mks', 'gks', 'lks', 'ogc', 'osc', 'rcs', 'asd', 'ssd',
+  'ks', 'mks', 'gks', 'lks', 'ogc', 'osc', 'rcs', 'asd', 'ssd', 'mfc',
   'club', 'clube', 'calcio', 'futebol', 'futbol', 'football', 'team',
   'the', 'de', 'do', 'da', 'of', 'and',
 ]);
@@ -42,6 +42,8 @@ const TOKEN_SUBSTITUTIONS = Object.freeze({
   muenchen: 'munich',
   koln: 'cologne',
   koeln: 'cologne',
+  nurnberg: 'nuremberg',
+  nuernberg: 'nuremberg',
   monchengladbach: 'gladbach',
   moenchengladbach: 'gladbach',
   wanderers: 'wanderers',
@@ -109,6 +111,11 @@ export const NAME_ALIASES = Object.freeze({
   'celtavigo b': 'celta fortuna',
   'celta vigo b': 'celta fortuna',
   amedspor: 'amed sportif faaliyetler',
+  basaksehir: 'istanbul basaksehir',
+  'istanbul bb': 'istanbul basaksehir',
+  laval: 'stade lavallois',
+  // Same club, named for the city and for the suburb its ground is in.
+  'sabah baku': 'sabah masazir',
 });
 
 /**
