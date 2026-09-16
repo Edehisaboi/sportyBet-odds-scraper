@@ -149,16 +149,17 @@ test('flattenPage tolerates an empty page', () => {
   assert.deepEqual(flattenPage(undefined), []);
 });
 
+const eventPage = (totalNum, ...eventIds) => ({
+  totalNum,
+  tournaments: [{
+    id: 'sr:tournament:17',
+    events: eventIds.map((eventId) => ({ eventId, homeTeamName: 'Home', awayTeamName: 'Away' })),
+  }],
+});
+
 test('fetchEventIndex looks past one empty page and stops after confirmation', async () => {
   const calls = [];
-  const eventPage = (eventId) => ({
-    totalNum: 2,
-    tournaments: [{
-      id: 'sr:tournament:17',
-      events: [{ eventId, homeTeamName: 'Home', awayTeamName: 'Away' }],
-    }],
-  });
-  const pages = [eventPage('sr:match:1'), {}, eventPage('sr:match:2'), {}, {}];
+  const pages = [eventPage(2, 'sr:match:1'), {}, eventPage(2, 'sr:match:2'), {}, {}];
 
   const index = await fetchEventIndex({
     maxPages: pages.length,
@@ -168,8 +169,79 @@ test('fetchEventIndex looks past one empty page and stops after confirmation', a
     },
   });
 
-  assert.deepEqual(calls, [1, 2, 3, 4, 5]);
+  // A pass walks past the single empty page and stops on the confirmed pair.
+  assert.deepEqual(calls.slice(0, 5), [1, 2, 3, 4, 5]);
   assert.deepEqual(index.events.map((item) => item.eventId), ['sr:match:1', 'sr:match:2']);
+});
+
+test('fetchEventIndex keeps walking until a pass finds nothing new', async () => {
+  // The feed hands out a different slice each time, which is what the real one
+  // does: no single walk sees the whole slate.
+  const draws = [
+    [eventPage(4, 'sr:match:1', 'sr:match:2'), {}, {}],
+    [eventPage(4, 'sr:match:2', 'sr:match:3'), {}, {}],
+    [eventPage(4, 'sr:match:3', 'sr:match:4'), {}, {}],
+    [eventPage(4, 'sr:match:1', 'sr:match:4'), {}, {}],
+  ];
+  let pass = -1;
+
+  const index = await fetchEventIndex({
+    maxPages: 3,
+    fetchPage: async ({ pageNum }) => {
+      if (pageNum === 1) pass += 1;
+      return (draws[Math.min(pass, draws.length - 1)])[pageNum - 1];
+    },
+  });
+
+  assert.deepEqual(
+    index.events.map((item) => item.eventId).sort(),
+    ['sr:match:1', 'sr:match:2', 'sr:match:3', 'sr:match:4'],
+  );
+  // Three passes to collect them, a fourth to confirm nothing is left.
+  assert.equal(index.passes, 4);
+});
+
+test('fetchEventIndex stops after one pass when the feed is consistent', async () => {
+  const pages = [eventPage(1, 'sr:match:1'), {}, {}];
+
+  const index = await fetchEventIndex({
+    maxPages: pages.length,
+    fetchPage: async ({ pageNum }) => pages[pageNum - 1],
+  });
+
+  // Nothing new on the second pass, so it settles immediately.
+  assert.equal(index.passes, 2);
+  assert.equal(index.events.length, 1);
+});
+
+test('fetchEventIndex measures the shortfall against the largest total offered', async () => {
+  // Replicas disagree about how many events exist. Believing the first page's
+  // figure understated a real gap by roughly three times.
+  const pages = [eventPage(10, 'sr:match:1'), eventPage(90, 'sr:match:2'), {}, {}];
+
+  const index = await fetchEventIndex({
+    maxPages: pages.length,
+    fetchPage: async ({ pageNum }) => pages[pageNum - 1],
+  });
+
+  assert.equal(index.totalNum, 90);
+});
+
+test('fetchEventIndex keeps a usable index when a later pass fails', async () => {
+  let pass = 0;
+
+  const index = await fetchEventIndex({
+    maxPages: 3,
+    fetchPage: async ({ pageNum }) => {
+      if (pageNum === 1) pass += 1;
+      if (pass > 1) throw new Error('upstream unavailable');
+      return [eventPage(2, 'sr:match:1'), {}, {}][pageNum - 1];
+    },
+  });
+
+  assert.equal(index.events.length, 1);
+  assert.equal(index.failures.length, 1);
+  assert.match(index.failures[0].message, /upstream unavailable/);
 });
 
 test('fetchEventIndex fails instead of silently skipping a failed page', async () => {

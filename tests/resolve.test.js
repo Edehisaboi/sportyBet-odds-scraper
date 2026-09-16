@@ -49,6 +49,35 @@ test('canonicalName drops punctuation debris left as single characters', () => {
   assert.equal(canonicalName('Borussia M´gladbach'), 'borussia gladbach');
 });
 
+test('an apostrophe inside a word joins it rather than splitting it', () => {
+  // SportyBet writes "Be`er Sheva"; ParlayHux stores "Beer Sheva". Splitting on
+  // the apostrophe left "be er", which scored 0.656 against a 0.72 floor and
+  // lost a Europa League tie that was sitting in the index at the right kickoff.
+  assert.equal(canonicalName('Hapoel Be`er Sheva FC'), 'hapoel beer sheva');
+  assert.ok(nameSimilarity('H. Beer Sheva', 'Hapoel Be`er Sheva FC') >= 0.72);
+});
+
+test('a club spelt with and without its article is one club', () => {
+  // "RC Deportivo de A Coruna" against "Dep. A Coruna": "rc" is club noise like
+  // "rcd" beside it, and the alias must not add a "la" the other side lacks.
+  assert.equal(
+    canonicalName('RC Deportivo de A Coruna'),
+    canonicalName('Dep. A Coruna'),
+  );
+  assert.equal(
+    canonicalName('Deportivo La Coruna'),
+    canonicalName('RC Deportivo de A Coruna'),
+  );
+});
+
+test('the abbreviation fixes do not collapse clubs that merely look alike', () => {
+  // The whole module exists to avoid this, so widening the normaliser has to be
+  // shown not to have widened it onto neighbours.
+  assert.ok(nameSimilarity('Manchester City', 'Manchester United') < 0.72);
+  assert.ok(nameSimilarity('Atletico Madrid', 'Real Madrid') < 0.72);
+  assert.ok(nameSimilarity('Racing Santander', 'Real Santander') < 0.72);
+});
+
 test('canonicalName never reduces a name to nothing', () => {
   // Every token is club noise, so the noise filter has to back off.
   assert.notEqual(canonicalName('Athletic Club'), '');

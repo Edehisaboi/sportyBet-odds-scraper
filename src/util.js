@@ -21,7 +21,7 @@
 const NOISE_TOKENS = new Set([
   'fc', 'afc', 'cf', 'sc', 'ac', 'ss', 'ssc', 'as', 'us', 'usl', 'sv', 'tsv', 'vfl', 'vfb',
   'bsc', 'fsv', 'ssv', 'msv', 'spvgg', 'bv', 'sk', 'bk', 'if', 'ifk', 'ff', 'gif', 'aik',
-  'cd', 'ud', 'rcd', 'ca', 'cs', 'sd', 'ec', 'se', 'fk', 'nk', 'hnk', 'gnk',
+  'cd', 'ud', 'rc', 'rcd', 'ca', 'cs', 'sd', 'ec', 'se', 'fk', 'nk', 'hnk', 'gnk',
   'ks', 'mks', 'gks', 'lks', 'ogc', 'osc', 'rcs', 'asd', 'ssd', 'mfc',
   'club', 'clube', 'calcio', 'futebol', 'futbol', 'football', 'team',
   'the', 'de', 'do', 'da', 'of', 'and',
@@ -107,7 +107,10 @@ export const NAME_ALIASES = Object.freeze({
   'union gilloise': 'union saint gilloise',
   'st liege': 'standard liege',
   'st etienne': 'saint etienne',
-  'dep a coruna': 'deportivo la coruna',
+  // Not "deportivo la coruna": the "la" is absent from SportyBet's "RC
+  // Deportivo de A Coruna", and inserting it cost the pair the name threshold.
+  'dep a coruna': 'deportivo coruna',
+  'deportivo la coruna': 'deportivo coruna',
   'celtavigo b': 'celta fortuna',
   'celta vigo b': 'celta fortuna',
   amedspor: 'amed sportif faaliyetler',
@@ -136,6 +139,12 @@ export function normalizeName(value) {
     .replace(/ß/g, 'ss')
     .replace(/oe(?=\b)/g, 'o')
     .replace(/&/g, ' and ')
+    // An apostrophe after two or more letters is orthographic and joins the
+    // word: SportyBet's "Be`er Sheva" has to reduce to "beer", not "be er",
+    // which shares far fewer bigrams. After a single letter it is an
+    // abbreviation mark -- "M'gladbach" -- and still splits, leaving the stray
+    // letter for the single-character filter in `canonicalName` to drop.
+    .replace(/(?<=[a-z]{2})['`´‘’](?=[a-z])/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
