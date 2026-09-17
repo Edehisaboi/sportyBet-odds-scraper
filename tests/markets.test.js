@@ -134,6 +134,47 @@ test('corners over/under maps from market 166', () => {
   assert.equal(over.line, 10.5);
 });
 
+test('team corners map from SportyBet house markets on outcome ids 30/31', () => {
+  const [homeOver] = mapMarket({
+    id: '900300', status: 0, specifier: 'total=4.5', outcomes: [outcome('30', '1.85')],
+  });
+  assert.equal(homeOver.market, MARKET.TEAM_TOTAL_CORNERS);
+  assert.equal(homeOver.selection, SELECTION.HOME_OVER);
+  assert.equal(homeOver.line, 4.5);
+
+  const [awayUnder] = mapMarket({
+    id: '900301', status: 0, specifier: 'total=3.5', outcomes: [outcome('31', '1.72')],
+  });
+  assert.equal(awayUnder.market, MARKET.TEAM_TOTAL_CORNERS);
+  assert.equal(awayUnder.selection, SELECTION.AWAY_UNDER);
+  assert.equal(awayUnder.line, 3.5);
+});
+
+test('team corners ignore the Sportradar totals outcome ids', () => {
+  // The bug this fixes: 12/13 are what every other totals market uses, so a map
+  // built from TOTALS_OUTCOMES matched the market and dropped every outcome.
+  assert.deepEqual(
+    mapMarket({ id: '900300', status: 0, specifier: 'total=4.5', outcomes: [outcome('12', '1.85')] }),
+    [],
+  );
+});
+
+test('corners 1X2 maps all three sides from market 162', () => {
+  const quotes = mapMarket({
+    id: '162',
+    status: 0,
+    outcomes: [outcome('1', '1.90'), outcome('2', '11.0'), outcome('3', '2.50')],
+  });
+  assert.deepEqual(
+    quotes.map((quote) => [quote.market, quote.selection, quote.line]),
+    [
+      [MARKET.MOST_CORNERS, SELECTION.HOME, null],
+      [MARKET.MOST_CORNERS, SELECTION.DRAW, null],
+      [MARKET.MOST_CORNERS, SELECTION.AWAY, null],
+    ],
+  );
+});
+
 test('markets we do not price are dropped', () => {
   // 16 is an Asian handicap, 41 a correct score: both are live markets we have
   // no selection vocabulary for.

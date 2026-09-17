@@ -25,6 +25,8 @@ export const MARKET = Object.freeze({
   FIRST_HALF_OVER_UNDER: 'first_half_over_under',
   FIRST_HALF_TEAM_TOTAL: 'first_half_team_total',
   CORNERS_OVER_UNDER: 'corners_over_under',
+  TEAM_TOTAL_CORNERS: 'team_total_corners',
+  MOST_CORNERS: 'most_corners',
 });
 
 export const SELECTION = Object.freeze({
@@ -113,6 +115,28 @@ export const MARKET_MAP = Object.freeze({
 
   // -- Corners -----------------------------------------------------
   166: { market: MARKET.CORNERS_OVER_UNDER, lined: true, outcomes: TOTALS_OUTCOMES },
+
+  // "Corners - 1X2" is a three-way: level corners pay the draw rather than
+  // voiding. The draw is carried for the same reason match_result's is -- it
+  // is never predicted, but a complete set of prices is what lets the book's
+  // margin be removed from the two sides that are.
+  162: { market: MARKET.MOST_CORNERS, outcomes: RESULT_OUTCOMES },
+
+  // Team corners are SportyBet's own markets, not Sportradar's: they sit in a
+  // 900000+ id range and number their over/under outcomes 30/31 rather than the
+  // 12/13 every Sportradar totals market uses. Reusing TOTALS_OUTCOMES here
+  // looks right and yields nothing -- the market matches, then every outcome
+  // falls through unrecognised.
+  900300: {
+    market: MARKET.TEAM_TOTAL_CORNERS,
+    lined: true,
+    outcomes: { 30: SELECTION.HOME_OVER, 31: SELECTION.HOME_UNDER },
+  },
+  900301: {
+    market: MARKET.TEAM_TOTAL_CORNERS,
+    lined: true,
+    outcomes: { 30: SELECTION.AWAY_OVER, 31: SELECTION.AWAY_UNDER },
+  },
 });
 
 /** Every SportyBet market id this actor reads, for feed-level filtering. */

@@ -94,8 +94,16 @@ inside them (`"Over 2.5"`), while the ids do not move.
 | `first_half_over_under` | `68` | line from `total=` |
 | `first_half_team_total` | `69` home, `70` away | line from `total=` |
 | `corners_over_under` | `166` | line from `total=` |
+| `team_total_corners` | `900300` home, `900301` away | line from `total=`, outcomes 30/31 |
+| `most_corners` | `162` (Corners - 1X2) | outcomes 1/2/3, three-way |
 
-Two of those are worth explaining:
+Three of those are worth explaining:
+
+- **Team corners** are SportyBet's own markets rather than Sportradar's. They
+  sit in a `900000+` id range and number their over/under outcomes `30`/`31`,
+  not the `12`/`13` every Sportradar totals market uses. A map built from the
+  usual totals outcomes matches the market and then drops every outcome, which
+  is why these lines were missing entirely rather than arriving wrong.
 
 - **Goal range** comes from *Multigoals* (548), not from the market SportyBet
   actually labels "Goal Range" (25). Market 25 partitions goals into
